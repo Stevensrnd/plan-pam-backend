@@ -108,8 +108,7 @@ def ajouter_solde():
 
         return jsonify({
             "statut": "Succès",
-            "message": f"{montant} HTG ajoutés avec succès !",
-            "nouveau_solde": nouveau_solde
+            "message": f"{montant} HTG ajoutés avec succès !"
         }), 200
 
     except Exception as e:
