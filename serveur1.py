@@ -30,6 +30,45 @@ def initialiser_bdd():
         print("Base de données PLAN PAM initialisée avec succès !")
         
     conn.close()
+    @app.route('/ajouter_solde', methods=['POST'])
+def ajouter_solde():
+    try:
+        data = request.get_json()
+        telephone = data.get('numero')
+        montant = float(data.get('montant', 0))
+        
+        if montant <= 0:
+            return jsonify({"erreur": "Le montant doit être supérieur à 0"}), 400
+
+        # Connexion à votre base de données
+        conn = sqlite3.connect("plan_pam.db") # Vérifiez si c'est bien le nom de votre fichier .db
+        cursor = conn.cursor()
+
+        # 1. Vérifier si le compte existe et récupérer son solde actuel
+        cursor.execute("SELECT solde FROM comptes WHERE telephone = ?", (telephone,))
+        compte = cursor.fetchone()
+
+        if compte is None:
+            conn.close()
+            return jsonify({"erreur": "Compte introuvable"}), 404
+
+        solde_actuel = compte[0]
+        nouveau_solde = solde_actuel + montant
+
+        # 2. Mettre à jour le solde dans la base de données
+        cursor.execute("UPDATE comptes SET solde = ? WHERE telephone = ?", (nouveau_solde, telephone))
+        conn.commit()
+        conn.close()
+
+        return jsonify({
+            "statut": "Succès",
+            "message": f"Le rechargement de {montant} HTG a réussi.",
+            "nouveau_solde": nouveau_solde
+        }), 200
+
+    except Exception as e:
+        return jsonify({"erreur": f"Erreur lors du rechargement : {str(e)}"}), 500
+
 
 @app.route('/solde/<telephone>', methods=['GET'])
 def obtenir_solde(telephone):
