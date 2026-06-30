@@ -30,7 +30,9 @@ def initialiser_bdd():
         print("Base de données PLAN PAM initialisée avec succès !")
         
     conn.close()
-    @app.route('/ajouter_solde', methods=['POST'])
+    
+            "statut": "Succès",
+            "message": f"Le rechargement de {montant} HTG a réussi.",@app.route('/ajouter_solde', methods=['POST'])
 def ajouter_solde():
     try:
         data = request.get_json()
@@ -40,11 +42,11 @@ def ajouter_solde():
         if montant <= 0:
             return jsonify({"erreur": "Le montant doit être supérieur à 0"}), 400
 
-        # Connexion à votre base de données
-        conn = sqlite3.connect("plan_pam.db") # Vérifiez si c'est bien le nom de votre fichier .db
+        # Connexion sécurisée en utilisant la variable DB_NAME globale
+        conn = sqlite3.connect(DB_NAME)
         cursor = conn.cursor()
 
-        # 1. Vérifier si le compte existe et récupérer son solde actuel
+        # 1. Vérifier si le compte existe
         cursor.execute("SELECT solde FROM comptes WHERE telephone = ?", (telephone,))
         compte = cursor.fetchone()
 
@@ -55,14 +57,19 @@ def ajouter_solde():
         solde_actuel = compte[0]
         nouveau_solde = solde_actuel + montant
 
-        # 2. Mettre à jour le solde dans la base de données
+        # 2. Mettre à jour le solde dans la table comptes
         cursor.execute("UPDATE comptes SET solde = ? WHERE telephone = ?", (nouveau_solde, telephone))
         conn.commit()
         conn.close()
 
         return jsonify({
             "statut": "Succès",
-            "message": f"Le rechargement de {montant} HTG a réussi.",
+            "message": f"{montant} HTG ajoutés avec succès ! Enregistrement mis à jour."
+        }), 200
+
+    except Exception as e:
+        return jsonify({"erreur": f"Erreur interne du serveur : {str(e)}"}), 500
+
             "nouveau_solde": nouveau_solde
         }), 200
 
