@@ -61,8 +61,8 @@ def inscrire_utilisateur():
         if cursor.fetchone():
             return jsonify({"erreur": "Ce numéro possède déjà un compte Plan Pam."}), 400
             
-        # Création du compte avec un bonus de bienvenue de 250 HTG !
-        solde_initial = 250.0
+        # Création du compte avec un bonus de bienvenue de 0 HTG !
+        solde_initial = 0
         cursor.execute("INSERT INTO comptes VALUES (?, ?, ?)", (telephone, solde_initial, pin))
         conn.commit()
         
