@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mon Plan Pam</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f0f4f8; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
+        .phone-screen { width: 365px; height: 660px; background-color: #0b3c5d; color: white; border-radius: 35px; box-shadow: 0 15px 30px rgba(0,0,0,0.4); padding: 20px; box-sizing: border-box; display: flex; flex-direction: column; overflow-y: auto; }
+        .header { text-align: center; font-size: 26px; font-weight: bold; color: #f5da42; margin-bottom: 20px; border-bottom: 2px solid #f5da42; padding-bottom: 10px; }
+        .card { background-color: white; color: #333; padding: 15px; border-radius: 15px; margin-bottom: 15px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .card h3 { margin-top: 0; color: #0b3c5d; font-size: 16px; border-bottom: 1px solid #ddd; padding-bottom: 5px;}
+        input { width: 100%; padding: 10px; margin: 6px 0; border: 1px solid #ccc; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        button { width: 100%; background-color: #f5da42; color: #0b3c5d; border: none; padding: 12px; font-weight: bold; border-radius: 8px; cursor: pointer; font-size: 15px; transition: 0.2s; }
+        button:hover { background-color: #ffd700; transform: scale(1.02); }
+        .resultat { margin-top: 10px; font-weight: bold; text-align: center; padding: 10px; border-radius: 8px; font-size: 14px; }
+        .success { background-color: #d4edda; color: #155724; }
+        .error { background-color: #f8d7da; color: #721c24; }
+        p { margin: 5px 0; font-size: 14px; }
+    </style>
+</head>
+<body>
+
+<div class="phone-screen">
+    <div class="header"> Plan Pam</div>
+    
+    <div class="card">
+        <h3>Devenir Membre (Inscription)</h3>
+        <input type="text" id="ins-tele" placeholder="Nouveau numéro (ex: 31112233)">
+        <input type="password" id="ins-pin" placeholder="Créer un PIN (4 chiffres)">
+        <button onclick="creerCompte()">Créer mon Plan Pam</button>
+    </div>
+    <div class="card">
+    <h3>Ajouter du Solde</h3>
+    <input type="text" id="add_numero" placeholder="Numéro du compte">
+    <input type="number" id="add_montant" placeholder="Montant (HTG)">
+    <button onclick="crediterCompte()">Ajouter le solde</button>
+</div>
+
+    <div class="card">
+        <h3>Espace Session</h3>
+        <input type="text" id="mon-telephone" placeholder="Entrez votre numéro pour voir votre solde" value="44445555">
+        <p>Solde disponible : <span id="solde-text" style="font-weight: bold; color: #0b3c5d;">--- HTG</span></p>
+        <button onclick="chargerSolde()">Consulter mon solde</button>
+    </div>
+
+    <div class="card">
+        <h3>Faire un virement Plan Pam</h3>
+        <input type="text" id="destinataire" placeholder="Numéro du bénéficiaire">
+        <input type="number" id="montant" placeholder="Montant (HTG)">
+        <input type="password" id="pin" placeholder="Entrez votre PIN secret">
+        <button onclick="effectuerTransfert()">Valider le virement</button>
+    </div>
+
+    <div id="message-box" class="resultat" style="display: none;"></div>
+</div>
+
+<script>
+    const API_URL = "https://plan-pam-backend.onrender.com";
+    const msgBox = document.getElementById("message-box");
+function crediterCompte() {
+    const numero = document.getElementById('add_numero').value;
+    const montant = document.getElementById('add_montant').value;
+
+    fetch(`${API_URL}/ajouter_solde`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ numero: numero, montant: montant })
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message); // Affiche si l'argent a bien été ajouté
+    })
+    .catch(error => {
+        console.error('Erreur:', error);
+        alert("Impossible de contacter le serveur.");
+    });
+}
+
+    function afficherMessage(texte, estSucces) {
+        msgBox.style.display = "block";
+        msgBox.className = estSucces ? "resultat success" : "resultat error";
+        msgBox.innerText = texte;
+    }
+
+    // Fonction : Consulter Solde
+    async function chargerSolde() {
+        const tel = document.getElementById("mon-telephone").value;
+        try {
+            let reponse = await fetch(`${API_URL}/solde/${tel}`);
+            let donnees = await reponse.json();
+            if (reponse.ok) {
+                document.getElementById("solde-text").innerText = donnees.solde + " HTG";
+                msgBox.style.display = "none";
+            } else {
+                afficherMessage(donnees.erreur, false);
+            }
+        } catch (err) {
+            afficherMessage("Le serveur Plan Pam ne répond pas.", false);
+        }
+    }
+
+    // Fonction : Inscription
+    async function creerCompte() {
+        const tel = document.getElementById("ins-tele").value;
+        const pin = document.getElementById("ins-pin").value;
+        try {
+            let reponse = await fetch(`${API_URL}/inscription`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ telephone: tel, pin: pin })
+            });
+            let donnees = await reponse.json();
+            if (reponse.ok) {
+                afficherMessage(donnees.message, true);
+                document.getElementById("mon-telephone").value = tel; // Connecte automatiquement l'user
+                document.getElementById("solde-text").innerText = donnees.solde + " HTG";
+            } else {
+                afficherMessage(donnees.erreur, false);
+            }
+        } catch (err) {
+            afficherMessage("Échec de la connexion réseau pour l'inscription.", false);
+        }
+    }
+
+    // Fonction : Transfert d'argent
+    async function effectuerTransfert() {
+        const exp = document.getElementById("mon-telephone").value;
+        const dest = document.getElementById("destinataire").value;
+        const mt = document.getElementById("montant").value;
+        const pinCode = document.getElementById("pin").value;
+
+        try {
+            let reponse = await fetch(`${API_URL}/transfert`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ expediteur: exp, destinataire: dest, montant: mt, pin: pinCode })
+            });
+            let donnees = await reponse.json();
+            if (reponse.ok) {
+                afficherMessage(donnees.message, true);
+                document.getElementById("solde-text").innerText = donnees.nouveau_solde + " HTG";
+            } else {
+                afficherMessage(donnees.erreur, false);
+            }
+        } catch (err) {
+            afficherMessage("Impossible de finaliser le virement.", false);
+        }
+    }
+</script>
+
+</body>
+</html>
